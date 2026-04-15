@@ -23,27 +23,46 @@ connectDB()
 app.use(helmet())
 app.use(generalLimiter)
 
-// ─── CORS ────────────────────────────────────────────────
-// Builds an allowed-origins list from env + common local dev ports
+// ─── CORS (FIXED + PRODUCTION READY) ──────────────────────
+
+// 👉 Set this in Render ENV:
+
+const rawOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean)
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,          // e.g. https://your-app.vercel.app
-  'http://localhost:3000',           // Vite dev server
-  'http://localhost:5173',           // Vite alt port
+  ...rawOrigins,
+  'http://localhost:3000',
+  'http://localhost:5173',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5173',
-].filter(Boolean) // removes undefined if FRONTEND_URL not set
+]
 
-app.use(cors({
+console.log('🔗 Allowed CORS Origins:', allowedOrigins)
+
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman, mobile apps, same-origin)
+    // Allow requests without origin (Postman, curl, mobile apps)
     if (!origin) return callback(null, true)
-    if (allowedOrigins.includes(origin)) return callback(null, true)
-    callback(new Error(`CORS blocked: ${origin} is not in the allowed list.`))
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+
+    return callback(new Error(`CORS blocked: ${origin}`))
   },
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'x-admin-secret', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
   credentials: true,
-}))
+}
+
+// Apply CORS
+app.use(cors(corsOptions))
+
+// Handle preflight requests (IMPORTANT)
+app.options('*', cors(corsOptions))
 
 // ─── Body Parsing ─────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }))
@@ -65,9 +84,12 @@ app.use('/api/auth', authRoutes)
 app.get('/', (req, res) => {
   res.json({
     name: 'AP Newsletter API',
-    version: '3.0.0',
+    version: '3.1.0',
     status: 'running',
     environment: process.env.NODE_ENV || 'development',
+    cors: {
+      allowedOrigins,
+    },
     endpoints: {
       signup:      'POST   /api/auth/signup',
       login:       'POST   /api/auth/login',
@@ -83,10 +105,10 @@ app.get('/', (req, res) => {
   })
 })
 
-// ─── Seed knowledge base 3 seconds after startup ─────────
+// ─── Seed knowledge base ─────────────────────────────────
 setTimeout(() => {
   seedKnowledge(addToVectorStore).catch(e => {
-    console.log('  ⚠️  Knowledge seeding skipped:', e.message)
+    console.log('⚠️ Knowledge seeding skipped:', e.message)
   })
 }, 3000)
 
@@ -97,27 +119,31 @@ app.use((req, res) => {
 
 // ─── Global Error Handler ─────────────────────────────────
 app.use((err, req, res, next) => {
-  // CORS errors get a clear message
   if (err.message?.startsWith('CORS blocked')) {
-    return res.status(403).json({ success: false, message: err.message })
+    return res.status(403).json({
+      success: false,
+      message: err.message,
+      fix: `Add FRONTEND_URL=${req.headers.origin} in Render environment variables`,
+    })
   }
+
   console.error('Unhandled error:', err)
+
   res.status(err.status || 500).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' ? 'Internal server error.' : err.message,
+    message: process.env.NODE_ENV === 'production'
+      ? 'Internal server error.'
+      : err.message,
   })
 })
 
 // ─── Start Server ─────────────────────────────────────────
 app.listen(PORT, () => {
   console.log('')
-  console.log('  ▓▓ AP Newsletter Backend v3.0')
-  console.log(`  ✅ Server running on http://localhost:${PORT}`)
-  console.log(`  🔐 Auth:     POST /api/auth/signup | /api/auth/login`)
-  console.log(`  🤖 AI Chat:  POST /api/chat`)
-  console.log(`  📚 Add Data: POST /api/add-data`)
-  console.log(`  🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log(`  🔗 Allowed origins: ${allowedOrigins.join(', ') || '(none set)'}`)
+  console.log('▓▓ AP Newsletter Backend v3.1')
+  console.log(`✅ Server running on http://localhost:${PORT}`)
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`🔗 Allowed origins: ${allowedOrigins.join(', ') || '(none set)'}`)
   console.log('')
 })
 
