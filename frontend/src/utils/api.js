@@ -7,8 +7,9 @@
 // In PRODUCTION:  VITE_API_URL=https://your-backend.onrender.com/api
 //   → BASE resolves to that full URL
 
-const BASE = import.meta.env.VITE_API_URL || '/api'
+const API_URL = import.meta.env.VITE_API_URL;
 
+console.log("API URL:", API_URL); // ✅ DEBUG
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getToken() {
