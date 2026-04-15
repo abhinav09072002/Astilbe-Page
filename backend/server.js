@@ -16,16 +16,17 @@ const { seedKnowledge } = require('./data/knowledge')
 const app = express()
 const PORT = process.env.PORT || 5000
 
-// ─── Connect to MongoDB ───────────────────────────────────
+// ─── Connect to MongoDB ───────────────────────────────────────
 connectDB()
 
-// ─── Security Middleware ──────────────────────────────────
+// ─── Security Middleware ──────────────────────────────────────
 app.use(helmet())
 app.use(generalLimiter)
 
-// ─── CORS (FIXED + PRODUCTION READY) ──────────────────────
-
-// 👉 Set this in Render ENV:
+// ─── CORS ─────────────────────────────────────────────────────
+// In development the Vite proxy handles CORS so no browser request
+// ever hits the backend cross-origin.  In production set FRONTEND_URL
+// in your Render/Railway environment variables.
 
 const rawOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
@@ -44,13 +45,9 @@ console.log('🔗 Allowed CORS Origins:', allowedOrigins)
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests without origin (Postman, curl, mobile apps)
+    // Allow requests with no origin (Postman, curl, server-to-server)
     if (!origin) return callback(null, true)
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true)
-    }
-
+    if (allowedOrigins.includes(origin)) return callback(null, true)
     return callback(new Error(`CORS blocked: ${origin}`))
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -58,72 +55,68 @@ const corsOptions = {
   credentials: true,
 }
 
-// Apply CORS
 app.use(cors(corsOptions))
-
-// Handle preflight requests (IMPORTANT)
+// Handle ALL preflight requests BEFORE any other middleware
 app.options('*', cors(corsOptions))
 
-// ─── Body Parsing ─────────────────────────────────────────
+// ─── Body Parsing ─────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }))
 app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 
-// ─── Logging ─────────────────────────────────────────────
+// ─── Logging ─────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'))
 } else {
   app.use(morgan('combined'))
 }
 
-// ─── Routes ──────────────────────────────────────────────
+// ─── Routes ──────────────────────────────────────────────────
 app.use('/api', routes)
 app.use('/api', chatRoutes)
 app.use('/api/auth', authRoutes)
 
-// ─── Root ────────────────────────────────────────────────
+// ─── Root ────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
     name: 'AP Newsletter API',
     version: '3.1.0',
     status: 'running',
     environment: process.env.NODE_ENV || 'development',
-    cors: {
-      allowedOrigins,
-    },
+    cors: { allowedOrigins },
     endpoints: {
-      signup:      'POST   /api/auth/signup',
-      login:       'POST   /api/auth/login',
-      me:          'GET    /api/auth/me',
-      subscribe:   'POST   /api/waitlist',
-      count:       'GET    /api/waitlist/count',
-      health:      'GET    /api/health',
-      chat:        'POST   /api/chat',
-      addKnowledge:'POST   /api/add-data',
-      chatHistory: 'GET    /api/history/:sessionId',
-      adminList:   'GET    /api/admin/subscribers',
+      signup:       'POST   /api/auth/signup',
+      login:        'POST   /api/auth/login',
+      me:           'GET    /api/auth/me',
+      subscribe:    'POST   /api/waitlist',
+      count:        'GET    /api/waitlist/count',
+      health:       'GET    /api/health',
+      chat:         'POST   /api/chat',
+      addKnowledge: 'POST   /api/add-data',
+      chatHistory:  'GET    /api/history/:sessionId',
+      adminList:    'GET    /api/admin/subscribers',
     },
   })
 })
 
-// ─── Seed knowledge base ─────────────────────────────────
+// ─── Seed knowledge base ─────────────────────────────────────
 setTimeout(() => {
   seedKnowledge(addToVectorStore).catch(e => {
-    console.log('⚠️ Knowledge seeding skipped:', e.message)
+    console.log('⚠️  Knowledge seeding skipped:', e.message)
   })
 }, 3000)
 
-// ─── 404 Handler ─────────────────────────────────────────
+// ─── 404 Handler ─────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found.` })
 })
 
-// ─── Global Error Handler ─────────────────────────────────
-app.use((err, req, res, next) => {
+// ─── Global Error Handler ─────────────────────────────────────
+app.use((err, req, res, _next) => {
   if (err.message?.startsWith('CORS blocked')) {
     return res.status(403).json({
       success: false,
       message: err.message,
-      fix: `Add FRONTEND_URL=${req.headers.origin} in Render environment variables`,
+      fix: `Add FRONTEND_URL=${req.headers.origin} in your backend environment variables`,
     })
   }
 
@@ -137,7 +130,7 @@ app.use((err, req, res, next) => {
   })
 })
 
-// ─── Start Server ─────────────────────────────────────────
+// ─── Start Server ─────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log('')
   console.log('▓▓ AP Newsletter Backend v3.1')

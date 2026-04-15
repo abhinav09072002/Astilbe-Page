@@ -1,9 +1,16 @@
-// ─── Auth API Utilities ───────────────────────────────────────────────────────
-// Centralizes all API calls. Uses VITE_API_URL env var (proxied in dev).
+// ─── API Utilities ────────────────────────────────────────────────────────────
+// All API calls go through here.
+//
+// In DEVELOPMENT: VITE_API_URL is empty → BASE resolves to '/api'
+//   → Vite proxy rewrites to http://localhost:5000/api (no CORS issues)
+//
+// In PRODUCTION:  VITE_API_URL=https://your-backend.onrender.com/api
+//   → BASE resolves to that full URL
 
 const BASE = import.meta.env.VITE_API_URL || '/api'
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function getToken() {
   return localStorage.getItem('ap_token')
 }
@@ -17,7 +24,12 @@ function authHeaders() {
 }
 
 async function handleResponse(res) {
-  const data = await res.json()
+  let data
+  try {
+    data = await res.json()
+  } catch {
+    throw new Error(`Server returned non-JSON response (status ${res.status})`)
+  }
   if (!res.ok) throw new Error(data.message || `Error ${res.status}`)
   return data
 }
@@ -68,12 +80,29 @@ export async function apiDeleteIdea(id) {
   return handleResponse(res)
 }
 
-// ── Chat endpoint (reused from ChatWidget) ────────────────────────────────────
+// ── Chat endpoint ─────────────────────────────────────────────────────────────
+
 export async function apiChat({ message, sessionId }) {
   const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ message, sessionId }),
   })
+  return handleResponse(res)
+}
+
+// ── Waitlist endpoint ─────────────────────────────────────────────────────────
+
+export async function apiSubscribe({ email, source = 'waitlist' }) {
+  const res = await fetch(`${BASE}/waitlist`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, source }),
+  })
+  return handleResponse(res)
+}
+
+export async function apiGetCount() {
+  const res = await fetch(`${BASE}/waitlist/count`)
   return handleResponse(res)
 }
