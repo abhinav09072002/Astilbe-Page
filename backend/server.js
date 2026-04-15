@@ -9,7 +9,11 @@ const connectDB = require('./config/db')
 const routes = require('./routes/index')
 const chatRoutes = require('./routes/chat')
 const authRoutes = require('./routes/auth')
-const countRoutes = require('./routes/count')   // ✅ FIXED IMPORT
+
+// ✅ FIX: handle ES module export safely
+const countModule = require('./routes/count')
+const countRoutes = countModule.default || countModule
+
 const { generalLimiter } = require('./middleware/rateLimiter')
 const { addToVectorStore } = require('./services/vectorStore')
 const { seedKnowledge } = require('./data/knowledge')
@@ -69,7 +73,9 @@ if (process.env.NODE_ENV !== 'production') {
 app.use('/api', routes)
 app.use('/api', chatRoutes)
 app.use('/api/auth', authRoutes)
-app.use('/api/count', countRoutes)   // ✅ ADD THIS LINE
+
+// ✅ FIXED COUNT ROUTE
+app.use('/api/count', countRoutes)
 
 // ─── Root ────────────────────────────────────────────────────
 app.get('/', (req, res) => {
@@ -77,8 +83,19 @@ app.get('/', (req, res) => {
     name: 'AP Newsletter API',
     version: '3.1.0',
     status: 'running',
+    environment: process.env.NODE_ENV || 'development',
+    cors: { allowedOrigins },
     endpoints: {
-      count: 'GET /api/count',   // ✅ updated
+      signup:       'POST   /api/auth/signup',
+      login:        'POST   /api/auth/login',
+      me:           'GET    /api/auth/me',
+      subscribe:    'POST   /api/waitlist',
+      count:        'GET    /api/count',
+      health:       'GET    /api/health',
+      chat:         'POST   /api/chat',
+      addKnowledge: 'POST   /api/add-data',
+      chatHistory:  'GET    /api/history/:sessionId',
+      adminList:    'GET    /api/admin/subscribers',
     },
   })
 })
@@ -104,6 +121,7 @@ app.use((err, req, res, _next) => {
     return res.status(403).json({
       success: false,
       message: err.message,
+      fix: `Add FRONTEND_URL=${req.headers.origin} in backend env`,
     })
   }
 
@@ -119,7 +137,12 @@ app.use((err, req, res, _next) => {
 
 // ─── Start Server ─────────────────────────────────────────────
 app.listen(PORT, () => {
+  console.log('')
+  console.log('▓▓ AP Newsletter Backend v3.1')
   console.log(`✅ Server running on http://localhost:${PORT}`)
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`🔗 Allowed origins: ${allowedOrigins.join(', ') || '(none set)'}`)
+  console.log('')
 })
 
 module.exports = app
