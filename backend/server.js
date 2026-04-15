@@ -1,3 +1,5 @@
+import countRoutes from "./routes/count.js";
+app.use("/api/count", countRoutes);
 require('dotenv').config()
 
 const express = require('express')
@@ -22,6 +24,7 @@ connectDB()
 // ─── Security Middleware ──────────────────────────────────────
 app.use(helmet())
 app.use(generalLimiter)
+
 
 // ─── CORS ─────────────────────────────────────────────────────
 // In development the Vite proxy handles CORS so no browser request
