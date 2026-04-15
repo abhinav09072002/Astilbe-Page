@@ -1,5 +1,3 @@
-import countRoutes from "./routes/count.js";
-app.use("/api/count", countRoutes);
 require('dotenv').config()
 
 const express = require('express')
@@ -11,6 +9,7 @@ const connectDB = require('./config/db')
 const routes = require('./routes/index')
 const chatRoutes = require('./routes/chat')
 const authRoutes = require('./routes/auth')
+const countRoutes = require('./routes/count')   // ✅ FIXED IMPORT
 const { generalLimiter } = require('./middleware/rateLimiter')
 const { addToVectorStore } = require('./services/vectorStore')
 const { seedKnowledge } = require('./data/knowledge')
@@ -25,12 +24,7 @@ connectDB()
 app.use(helmet())
 app.use(generalLimiter)
 
-
 // ─── CORS ─────────────────────────────────────────────────────
-// In development the Vite proxy handles CORS so no browser request
-// ever hits the backend cross-origin.  In production set FRONTEND_URL
-// in your Render/Railway environment variables.
-
 const rawOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
   .map(o => o.trim())
@@ -48,7 +42,6 @@ console.log('🔗 Allowed CORS Origins:', allowedOrigins)
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (Postman, curl, server-to-server)
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) return callback(null, true)
     return callback(new Error(`CORS blocked: ${origin}`))
@@ -59,7 +52,6 @@ const corsOptions = {
 }
 
 app.use(cors(corsOptions))
-// Handle ALL preflight requests BEFORE any other middleware
 app.options('*', cors(corsOptions))
 
 // ─── Body Parsing ─────────────────────────────────────────────
@@ -77,6 +69,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.use('/api', routes)
 app.use('/api', chatRoutes)
 app.use('/api/auth', authRoutes)
+app.use('/api/count', countRoutes)   // ✅ ADD THIS LINE
 
 // ─── Root ────────────────────────────────────────────────────
 app.get('/', (req, res) => {
@@ -84,19 +77,8 @@ app.get('/', (req, res) => {
     name: 'AP Newsletter API',
     version: '3.1.0',
     status: 'running',
-    environment: process.env.NODE_ENV || 'development',
-    cors: { allowedOrigins },
     endpoints: {
-      signup:       'POST   /api/auth/signup',
-      login:        'POST   /api/auth/login',
-      me:           'GET    /api/auth/me',
-      subscribe:    'POST   /api/waitlist',
-      count:        'GET    /api/waitlist/count',
-      health:       'GET    /api/health',
-      chat:         'POST   /api/chat',
-      addKnowledge: 'POST   /api/add-data',
-      chatHistory:  'GET    /api/history/:sessionId',
-      adminList:    'GET    /api/admin/subscribers',
+      count: 'GET /api/count',   // ✅ updated
     },
   })
 })
@@ -110,7 +92,10 @@ setTimeout(() => {
 
 // ─── 404 Handler ─────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found.` })
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found.`,
+  })
 })
 
 // ─── Global Error Handler ─────────────────────────────────────
@@ -119,7 +104,6 @@ app.use((err, req, res, _next) => {
     return res.status(403).json({
       success: false,
       message: err.message,
-      fix: `Add FRONTEND_URL=${req.headers.origin} in your backend environment variables`,
     })
   }
 
@@ -135,12 +119,7 @@ app.use((err, req, res, _next) => {
 
 // ─── Start Server ─────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log('')
-  console.log('▓▓ AP Newsletter Backend v3.1')
   console.log(`✅ Server running on http://localhost:${PORT}`)
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log(`🔗 Allowed origins: ${allowedOrigins.join(', ') || '(none set)'}`)
-  console.log('')
 })
 
 module.exports = app
