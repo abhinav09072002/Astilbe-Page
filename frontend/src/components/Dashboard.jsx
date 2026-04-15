@@ -520,7 +520,7 @@ export default function Dashboard() {
                 onKeyDown={e => { if (e.key==='Enter') generateIdeas() }}
                 placeholder="e.g. fintech for millennials, B2B SaaS, wellness…"
                 style={{
-                  flex:1, padding:'13px 18px',
+                  padding:'13px 18px',
                   background:'rgba(255,255,255,.03)',
                   border:'0.5px solid rgba(255,255,255,.15)',
                   borderRight:'none',

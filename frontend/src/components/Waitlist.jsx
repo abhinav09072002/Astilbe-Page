@@ -70,7 +70,7 @@ export default function Waitlist({ onSubmit, submitted }) {
             </form>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 10, flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex' }}>
               {['A','B','C','D','E'].map((l, i) => (
                 <div key={l} style={{ width: 28, height: 28, borderRadius: '50%', background: '#000', border: '1.5px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'rgba(255,255,255,.7)', fontWeight: 500, marginLeft: i === 0 ? 0 : -7 }}>
