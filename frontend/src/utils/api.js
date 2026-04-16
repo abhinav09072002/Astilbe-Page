@@ -7,9 +7,11 @@
 // In PRODUCTION:  VITE_API_URL=https://your-backend.onrender.com/api
 //   → BASE resolves to that full URL
 
-const API_URL = import.meta.env.VITE_API_URL;
+// ✅ FIX: was `API_URL` but all fetch calls used `BASE` — now properly defined
+const BASE = import.meta.env.VITE_API_URL || '/api';
 
-console.log("API URL:", API_URL); // ✅ DEBUG
+console.log("API BASE:", BASE); // ✅ DEBUG
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getToken() {
