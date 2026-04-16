@@ -40,7 +40,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5173',
-  'https://astilbe-page.netlify.app', 
+  'https://astilbe-page.netlify.app'
+  'https://astilbepage.com', 
 ]
 
 console.log('🔗 Allowed CORS Origins:', allowedOrigins)
