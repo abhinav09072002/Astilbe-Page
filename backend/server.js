@@ -77,9 +77,12 @@ app.use('/api/auth', authRoutes)
 
 // ✅ FIXED COUNT ROUTE
 app.use('/api/count', countRoutes)
+app.get('/api', (req, res) => {
+  res.json({ message: "API is running 🚀" });
+});
 
 // ─── Root ────────────────────────────────────────────────────
-app.get('/api', (req, res) => {
+app.get('/', (req, res) => {
   res.json({
     name: 'AP Newsletter API',
     version: '3.1.0',
