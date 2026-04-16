@@ -13,6 +13,14 @@ const {
 const { waitlistLimiter, adminLimiter } = require('../middleware/rateLimiter')
 const adminAuth = require('../middleware/adminAuth')
 
+// ✅ ADD THIS ROOT ROUTE (VERY IMPORTANT)
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: "API is running 🚀",
+  })
+})
+
 // ─── Input validation middleware ───
 const validateEmail = [
   body('email')
