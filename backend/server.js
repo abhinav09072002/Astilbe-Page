@@ -79,7 +79,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/count', countRoutes)
 
 // ─── Root ────────────────────────────────────────────────────
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.json({
     name: 'AP Newsletter API',
     version: '3.1.0',
